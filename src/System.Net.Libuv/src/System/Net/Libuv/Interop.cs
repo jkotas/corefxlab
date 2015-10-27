@@ -5,6 +5,14 @@ namespace System.Net.Libuv
     // This is roughly based on LibuvSharp
     static class UVInterop
     {
+        static byte[] ConvertToUtf8(string ip)
+        {
+            var res = new byte[ip.Length + 1];
+            for (int i = 0; i < ip.Length; i++)
+                res[i] = (byte)ip[i]; // HACK
+            return res;
+        }
+
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
         internal static extern IntPtr uv_default_loop();
 
@@ -33,16 +41,42 @@ namespace System.Net.Libuv
         internal static extern int uv_handle_size(UVHandle.HandleType type);
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern void uv_close(IntPtr handle, close_callback cb);
+        private unsafe static extern void uv_close(IntPtr handle, IntPtr cb);
+
+        internal static void uv_close(IntPtr handle, close_callback cb)
+        {
+            uv_close(handle, Marshal.GetFunctionPointerForDelegate(cb));
+        }
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal extern static int uv_ip4_addr(string ip, int port, out sockaddr_in address);
+        private extern unsafe static int uv_ip4_addr(byte * ip, int port, out sockaddr_in address);
+
+        internal unsafe static int uv_ip4_addr(string ip, int port, out sockaddr_in address)
+        {
+            fixed (byte* pIp = ConvertToUtf8(ip))
+            {
+                return uv_ip4_addr(pIp, port, out address);
+            }
+        }
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal extern static int uv_ip6_addr(string ip, int port, out sockaddr_in6 address);
+        private extern unsafe static int uv_ip6_addr(byte* ip, int port, out sockaddr_in6 address);
+
+        internal unsafe static int uv_ip6_addr(string ip, int port, out sockaddr_in6 address)
+        {
+            fixed (byte* pIp = ConvertToUtf8(ip))
+            {
+                return uv_ip6_addr(pIp, port, out address);
+            }
+        }
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int uv_listen(IntPtr stream, int backlog, handle_callback callback);
+        private static extern int uv_listen(IntPtr stream, int backlog, IntPtr callback);
+
+        internal static int uv_listen(IntPtr stream, int backlog, handle_callback callback)
+        {
+            return uv_listen(stream, backlog, Marshal.GetFunctionPointerForDelegate(callback));
+        }
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int uv_accept(IntPtr server, IntPtr client);
@@ -57,10 +91,19 @@ namespace System.Net.Libuv
         internal static extern int uv_req_size(RequestType type);
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int uv_tcp_bind(IntPtr handle, ref sockaddr_in sockaddr, uint flags);
+        private static unsafe extern int uv_tcp_bind(IntPtr handle, void * sockaddr, uint flags);
 
-        [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int uv_tcp_bind(IntPtr handle, ref sockaddr_in6 sockaddr, uint flags);
+        internal unsafe static int uv_tcp_bind(IntPtr handle, ref sockaddr_in sockaddr, uint flags)
+        {
+            fixed (void* pSockAddr = &sockaddr)
+                return uv_tcp_bind(handle, pSockAddr, flags);
+        }
+
+        internal unsafe static int uv_tcp_bind(IntPtr handle, ref sockaddr_in6 sockaddr, uint flags)
+        {
+            fixed (void * pSockAddr = &sockaddr)
+                return uv_tcp_bind(handle, pSockAddr, flags);
+        }
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int uv_tcp_init(IntPtr loop, IntPtr handle);
@@ -71,20 +114,27 @@ namespace System.Net.Libuv
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int uv_tcp_keepalive(IntPtr handle, int enable, int delay);
 
-        [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int uv_read_start(IntPtr stream, alloc_callback_unix alloc_callback, read_callback_unix read_callback);
+        // [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
+        // internal static extern int uv_read_start(IntPtr stream, alloc_callback_unix alloc_callback, read_callback_unix read_callback);
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int uv_read_start(IntPtr stream, alloc_callback_win alloc_callback, read_callback_win read_callback);
+        private static extern int uv_read_start(IntPtr stream, IntPtr alloc_callback, IntPtr read_callback);
+
+        internal static int uv_read_start(IntPtr stream, alloc_callback_win alloc_callback, read_callback_win read_callback)
+        {
+            return uv_read_start(stream, Marshal.GetFunctionPointerForDelegate(alloc_callback), Marshal.GetFunctionPointerForDelegate(read_callback));
+        }
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal unsafe extern static int uv_try_write(IntPtr handle, UVBuffer.Windows* buffersList, int bufferCount);
+        internal unsafe extern static int uv_try_write(IntPtr handle, void* buffersList, int bufferCount);
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal unsafe extern static int uv_try_write(IntPtr handle, UVBuffer.Unix* buffersList, int bufferCount);
+        private unsafe static extern int uv_shutdown(IntPtr req, IntPtr handle, IntPtr callback);
 
-        [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int uv_shutdown(IntPtr req, IntPtr handle, handle_callback callback);
+        internal static int uv_shutdown(IntPtr req, IntPtr handle, handle_callback callback)
+        {
+            return uv_shutdown(req, handle, Marshal.GetFunctionPointerForDelegate(callback));
+        }
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int uv_read_watcher_start(IntPtr stream, Action<IntPtr> read_watcher_callback);
@@ -92,11 +142,18 @@ namespace System.Net.Libuv
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int uv_read_stop(IntPtr stream);
 
-        [DllImport("libuv", EntryPoint = "uv_write", CallingConvention = CallingConvention.Cdecl)]
-        internal unsafe static extern int uv_write_unix(IntPtr req, IntPtr handle, UVBuffer.Unix* bufferList, int bufferCount, handle_callback callback);
+        [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
+        private unsafe static extern int uv_write(IntPtr req, IntPtr handle, void* bufferList, int bufferCount, IntPtr callback);
 
-        [DllImport("libuv", EntryPoint = "uv_write", CallingConvention = CallingConvention.Cdecl)]
-        internal unsafe static extern int uv_write_win(IntPtr req, IntPtr handle, UVBuffer.Windows* bufferList, int bufferCount, handle_callback callback);
+        internal unsafe static int uv_write_unix(IntPtr req, IntPtr handle, UVBuffer.Unix* bufferList, int bufferCount, handle_callback callback)
+        {
+            return uv_write(req, handle, bufferList, bufferCount, Marshal.GetFunctionPointerForDelegate(callback));
+        }
+
+        internal unsafe static int uv_write_win(IntPtr req, IntPtr handle, UVBuffer.Windows* bufferList, int bufferCount, handle_callback callback)
+        {
+            return uv_write(req, handle, bufferList, bufferCount, Marshal.GetFunctionPointerForDelegate(callback));
+        }
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int uv_is_active(IntPtr handle);

@@ -37,8 +37,9 @@ namespace System.Net.Libuv
             {
                 return UVError.OK;
             }
+            return UVError.EOF;
             // TODO: need to figure out how to do this more efficiently
-            return ErrorNameToError(ErrorCodeToText(errorCode));
+            // return ErrorNameToError(ErrorCodeToText(errorCode));
         }
 
         internal static void ThrowIfError(int errorCode)
