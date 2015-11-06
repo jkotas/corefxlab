@@ -18,7 +18,7 @@ namespace System.Net.Libuv
 
             if (IsUnix)
             {
-                // UVException.ThrowIfError(UVInterop.uv_read_start(Handle, UVBuffer.AllocateUnixBuffer, ReadUnix));
+                UVException.ThrowIfError(UVInterop.uv_read_start(Handle, UVBuffer.AllocateUnixBuffer, ReadUnix));
             }
             else
             {

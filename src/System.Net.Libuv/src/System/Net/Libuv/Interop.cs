@@ -114,13 +114,14 @@ namespace System.Net.Libuv
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
         internal static extern int uv_tcp_keepalive(IntPtr handle, int enable, int delay);
 
-        // [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        // internal static extern int uv_read_start(IntPtr stream, alloc_callback_unix alloc_callback, read_callback_unix read_callback);
-
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        private static extern int uv_read_start(IntPtr stream, IntPtr alloc_callback, IntPtr read_callback);
+        internal static extern int uv_read_start(IntPtr stream, IntPtr alloc_callback, IntPtr read_callback);
 
         internal static int uv_read_start(IntPtr stream, alloc_callback_win alloc_callback, read_callback_win read_callback)
+        {
+            return uv_read_start(stream, Marshal.GetFunctionPointerForDelegate(alloc_callback), Marshal.GetFunctionPointerForDelegate(read_callback));
+        }
+        internal static int uv_read_start(IntPtr stream, alloc_callback_unix alloc_callback, read_callback_unix read_callback)
         {
             return uv_read_start(stream, Marshal.GetFunctionPointerForDelegate(alloc_callback), Marshal.GetFunctionPointerForDelegate(read_callback));
         }
