@@ -115,7 +115,7 @@ namespace System.Net.Libuv
         internal static extern int uv_tcp_keepalive(IntPtr handle, int enable, int delay);
 
         [DllImport("libuv", CallingConvention = CallingConvention.Cdecl)]
-        internal static extern int uv_read_start(IntPtr stream, IntPtr alloc_callback, IntPtr read_callback);
+        private static extern int uv_read_start(IntPtr stream, IntPtr alloc_callback, IntPtr read_callback);
 
         internal static int uv_read_start(IntPtr stream, alloc_callback_win alloc_callback, read_callback_win read_callback)
         {
